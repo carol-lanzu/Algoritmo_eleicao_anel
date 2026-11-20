@@ -37,20 +37,21 @@ Cinco processos formados em anel:
   ↑________________________↓
 ```
 
-Cada processo tem um **ID único** (ex.: P1=1, P2=5, P3=3, P4=4, P5=2).  
+Cada processo tem um **ID único igual ao seu nome** (P1=id 1, P2=id 2, P3=id 3, P4=id 4, P5=id 5).  
+> ✅ **Regra adotada:** `nome do processo == valor do ID`. Assim P5 (maior ID) sempre vence uma eleição com 5 processos.  
 O anel é **unidirecional**: cada processo só envia para o próximo e só recebe do anterior.
 
 ---
 
 ### Fase 1 — Detecção de falha e início da eleição
 
-**Situação:** P3 (ID=3) percebe que P4 (antigo líder, ID=4) não responde mais.
+**Situação:** P3 (ID=3) percebe que P5 (antigo líder, ID=5) não responde mais.
 
 | Passo | O que acontece |
 |-------|---------------|
-| 1 | P3 detecta a falha de P4 (timeout / sem resposta) |
+| 1 | P3 detecta a falha de P5 (timeout / sem resposta) |
 | 2 | P3 dispara uma mensagem `ELEIÇÃO(3)` — "Ei, estou me candidatando com ID 3!" |
-| 3 | P3 envia `ELEIÇÃO(3)` para seu vizinho no anel: **P5** (pula P4, que caiu) |
+| 3 | P3 envia `ELEIÇÃO(3)` para seu vizinho no anel: **P4** (pula P5, que caiu) |
 
 ---
 
@@ -62,13 +63,11 @@ P3 → ELEIÇÃO(3) → P5
 
 | Quem recebe | ID próprio | Compara | Resultado |
 |-------------|-----------|---------|-----------|
-| P5 (ID=2)   | 2 < 3     | 3 é maior | Passa `ELEIÇÃO(3)` para P1 |
-| P1 (ID=1)   | 1 < 3     | 3 é maior | Passa `ELEIÇÃO(3)` para P2 |
-| P2 (ID=5)   | **5 > 3** | 5 é maior! | Substitui: passa `ELEIÇÃO(5)` para P3 |
-| P3 (ID=3)   | 3 < 5     | 5 é maior | Passa `ELEIÇÃO(5)` para P5 |
-| P5 (ID=2)   | 2 < 5     | 5 é maior | Passa `ELEIÇÃO(5)` para P1 |
-| P1 (ID=1)   | 1 < 5     | 5 é maior | Passa `ELEIÇÃO(5)` para P2 |
-| P2 (ID=5)   | **5 == 5**| Meu próprio ID voltou! | Sou o **vencedor!** |
+| P4 (ID=4)   | **4 > 3** | 4 é maior! | Substitui: passa `ELEIÇÃO(4)` para P1 |
+| P1 (ID=1)   | 1 < 4     | 4 é maior | Passa `ELEIÇÃO(4)` para P2 |
+| P2 (ID=2)   | 2 < 4     | 4 é maior | Passa `ELEIÇÃO(4)` para P3 |
+| P3 (ID=3)   | 3 < 4     | 4 é maior | Passa `ELEIÇÃO(4)` para P4 |
+| P4 (ID=4)   | **4 == 4**| Meu próprio ID voltou! | Sou o **vencedor!** |
 
 ---
 
@@ -76,19 +75,19 @@ P3 → ELEIÇÃO(3) → P5
 
 | Passo | O que acontece |
 |-------|---------------|
-| 1 | P2 envia `COORDENADOR(5)` — "P2 (ID=5) é o novo líder!" |
-| 2 | A mensagem circula pelo anel: P3 → P5 → P1 → P2 |
-| 3 | Cada processo recebe, registra "líder = P2" e repassa |
-| 4 | Quando `COORDENADOR(5)` chega de volta em P2, a eleição termina |
+| 1 | P4 envia `COORDENADOR(4)` — "P4 (ID=4) é o novo líder!" |
+| 2 | A mensagem circula pelo anel: P1 → P2 → P3 → P4 |
+| 3 | Cada processo recebe, registra "líder = P4" e repassa |
+| 4 | Quando `COORDENADOR(4)` chega de volta em P4, a eleição termina |
 
 ---
 
 ### Resumo visual do anel após a eleição
 
 ```
-  P1 → P2(líder!) → P3 → P5 → P1
-             ↑
-       [P4 caiu e foi removido do anel]
+  P1 → P2 → P3 → P4(líder!) → P1
+                      ↑
+              [P5 caiu e foi removido do anel]
 ```
 
 ---
@@ -210,22 +209,20 @@ sequenceDiagram
     participant P3
     participant P5
     participant P1
-    participant P2
+    participant P4
 
-    Note over P3: P4 caiu (líder anterior)
-    P3->>P5: ELEIÇÃO(3)
-    P5->>P1: ELEIÇÃO(3)  [ID 2 < 3, passa adiante]
-    P1->>P2: ELEIÇÃO(3)  [ID 1 < 3, passa adiante]
-    P2->>P3: ELEIÇÃO(5)  [ID 5 > 3, substitui!]
-    P3->>P5: ELEIÇÃO(5)
-    P5->>P1: ELEIÇÃO(5)
-    P1->>P2: ELEIÇÃO(5)
-    Note over P2: Recebi meu próprio ID → Sou o líder!
-    P2->>P3: COORDENADOR(5)
-    P3->>P5: COORDENADOR(5)
-    P5->>P1: COORDENADOR(5)
-    P1->>P2: COORDENADOR(5)
-    Note over P2: Eleição concluída ✅
+    Note over P3: P5 caiu (líder anterior)
+    P3->>P4: ELEIÇÃO(3)
+    P4->>P1: ELEIÇÃO(4)  [ID 4 > 3, substitui!]
+    P1->>P2: ELEIÇÃO(4)  [ID 1 < 4, passa adiante]
+    P2->>P3: ELEIÇÃO(4)  [ID 2 < 4, passa adiante]
+    P3->>P4: ELEIÇÃO(4)  [ID 3 < 4, passa adiante]
+    Note over P4: Recebi meu próprio ID → Sou o líder!
+    P4->>P1: COORDENADOR(4)
+    P1->>P2: COORDENADOR(4)
+    P2->>P3: COORDENADOR(4)
+    P3->>P4: COORDENADOR(4)
+    Note over P4: Eleição concluída ✅
 ```
 
 ---
